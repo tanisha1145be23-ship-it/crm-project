@@ -1,25 +1,35 @@
-require("dotenv").config({ path: __dirname + "/.env" });
-
-console.log("ENV TEST:", process.env);
-console.log("JWT_SECRET:", process.env.JWT_SECRET);
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const axios = require("axios");
+
 const Lead = require("./models/Lead");
 const connectDB = require("./config/db");
 
 const app = express();
+
+// =======================
 // Middleware
 // =======================
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// =======================
+// Health Check Route (IMPORTANT)
+// =======================
+app.get("/", (req, res) => {
+  res.send("Backend is working 🚀");
+});
+
+// =======================
 // Database
 // =======================
 connectDB();
 
+// =======================
 // Routes
 // =======================
 const authRoutes = require("./routes/authRoutes");
@@ -30,13 +40,13 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
+
+// =======================
 // Telegram Bot Logic
 // =======================
-
 const userSessions = {};
 let lastUpdateId = 0;
 
-// Send Telegram Message Function
 const TOKEN = process.env.TELEGRAM_TOKEN;
 
 async function sendTelegramMessage(chatId, text) {
@@ -46,21 +56,18 @@ async function sendTelegramMessage(chatId, text) {
       {
         chat_id: chatId,
         text: text,
-      },
+      }
     );
 
-    console.log("Message sent:", response.data);
+    console.log("Message sent");
+    return response.data;
   } catch (error) {
-    console.error(
-      "Telegram Send Error:",
-      error.response?.data || error.message,
-    );
+    console.error("Telegram Error:", error.message);
   }
 }
 
-// Telegram Webhook
+// Webhook
 app.post("/telegram-webhook", async (req, res) => {
-  console.log("Telegram update:", req.body);
   res.sendStatus(200);
 
   try {
@@ -76,61 +83,48 @@ app.post("/telegram-webhook", async (req, res) => {
 
     const session = userSessions[chatId];
 
-    // START
     if (text === "/start") {
-      // FORCE RESET SESSION
-      userSessions[chatId] = {
-        step: "service",
-      };
+      userSessions[chatId] = { step: "service" };
 
       await sendTelegramMessage(
         chatId,
-        "👋 Welcome to GrowthLab Digital!\n\nPlease select a service:\n\n1️⃣ Social Media Marketing\n2️⃣ SEO\n3️⃣ Paid Ads\n4️⃣ Website Development",
+        "👋 Welcome!\n\n1️⃣ Social Media\n2️⃣ SEO\n3️⃣ Ads\n4️⃣ Website"
       );
-
       return;
     }
 
-    // SERVICE
     if (session.step === "service") {
       session.service = text;
       session.step = "name";
 
-      await sendTelegramMessage(chatId, "Please enter your Full Name:");
+      await sendTelegramMessage(chatId, "Enter your Full Name:");
       return;
     }
 
-    // NAME
     if (session.step === "name") {
       session.name = text;
       session.step = "business";
 
-      await sendTelegramMessage(chatId, "Please enter your Business Name:");
+      await sendTelegramMessage(chatId, "Enter Business Name:");
       return;
     }
 
-    // BUSINESS
     if (session.step === "business") {
       session.business = text;
       session.step = "phone";
 
-      await sendTelegramMessage(chatId, "Please enter your Phone Number:");
+      await sendTelegramMessage(chatId, "Enter Phone Number:");
       return;
     }
 
-    // PHONE
     if (session.step === "phone") {
       session.phone = text;
       session.step = "budget";
 
-      await sendTelegramMessage(
-        chatId,
-        "What is your monthly marketing budget?",
-      );
+      await sendTelegramMessage(chatId, "Monthly Budget?");
       return;
     }
 
-    // FINAL STEP
     if (session.step === "budget") {
       session.budget = text;
 
@@ -145,21 +139,20 @@ app.post("/telegram-webhook", async (req, res) => {
         });
 
         await newLead.save();
-        console.log("Lead saved successfully");
-      } catch (dbError) {
-        console.error("DB Error:", dbError);
+      } catch (err) {
+        console.error("DB Error:", err.message);
       }
 
       await sendTelegramMessage(
         chatId,
-        `🎉 Thank you ${session.name}!\n\nOur team will contact you shortly.\n\n🚀 GrowthLab Team`,
+        `🎉 Thanks ${session.name}! We will contact you soon.`
       );
 
       delete userSessions[chatId];
       return;
     }
-  } catch (error) {
-    console.error("Webhook error:", error);
+  } catch (err) {
+    console.error("Webhook error:", err.message);
   }
 });
 
