@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
-
   const [isSignup, setIsSignup] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -25,9 +24,9 @@ function Login() {
   const handleAuth = async () => {
     try {
       if (isSignup) {
-        await API.post("/auth/register", formData);
+        const res = await API.post("/auth/register", formData);
 
-        alert("Signup Successful 🚀");
+        alert(res.data?.message || "Signup Successful 🚀");
         setIsSignup(false);
       } else {
         const res = await API.post("/auth/login", {
@@ -35,20 +34,31 @@ function Login() {
           password: formData.password,
         });
 
-        localStorage.setItem("token", res.data.token);
+        // 🔥 SAFE TOKEN HANDLING
+        if (res.data?.token) {
+          localStorage.setItem("token", res.data.token);
 
-        navigate("/dashboard");
+          alert("Login Successful 🚀");
+
+          navigate("/dashboard");
+        } else {
+          alert("Login failed: Token not received");
+        }
       }
     } catch (err) {
-      console.log(err);
-      alert("Authentication Failed");
+      console.log("Auth Error:", err.response?.data || err.message);
+
+      alert(
+        err.response?.data?.message ||
+          "Authentication Failed (check email/password)"
+      );
     }
   };
 
   return (
     <div className="min-h-screen flex justify-center items-center overflow-hidden relative text-white">
 
-      {/* Background Image */}
+      {/* Background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
@@ -57,87 +67,53 @@ function Login() {
         }}
       />
 
-      {/* Dark Overlay */}
+      {/* Overlay */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
 
-      {/* Neon Glow */}
-      <div className="absolute w-[700px] h-[700px] bg-cyan-500/20 rounded-full blur-3xl top-[-200px] left-[-200px] animate-pulse" />
-
-      <div className="absolute w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-3xl bottom-[-150px] right-[-150px] animate-pulse" />
-
-      <div className="absolute w-[300px] h-[300px] bg-pink-500/20 rounded-full blur-3xl top-[40%] left-[40%]" />
-
-      {/* Grid Overlay */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-
-      {/* Floating Particles */}
-      <div className="absolute top-20 left-20 w-3 h-3 bg-cyan-400 rounded-full animate-bounce" />
-      <div className="absolute bottom-32 right-32 w-4 h-4 bg-purple-400 rounded-full animate-ping" />
-      <div className="absolute top-1/2 left-10 w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
+      {/* Glow Effects */}
+      <div className="absolute w-[700px] h-[700px] bg-cyan-500/20 rounded-full blur-3xl top-[-200px] left-[-200px]" />
+      <div className="absolute w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-3xl bottom-[-150px] right-[-150px]" />
 
       {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7 }}
-        className="relative z-10 w-[430px] bg-white/10 border border-white/10 backdrop-blur-2xl rounded-[32px] p-10 shadow-[0_0_60px_rgba(0,255,255,0.15)]"
+        className="relative z-10 w-[430px] bg-white/10 border border-white/10 backdrop-blur-2xl rounded-[32px] p-10"
       >
-
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <motion.div
-            whileHover={{ rotate: 10, scale: 1.05 }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-4xl font-bold shadow-2xl"
-          >
-            C
-          </motion.div>
-        </div>
-
-        <h1 className="text-5xl font-black text-center">
+        <h1 className="text-4xl font-bold text-center mb-2">
           CRM<span className="text-cyan-400">Pro</span>
         </h1>
 
-        <p className="text-center text-gray-300 mt-3 mb-8">
+        <p className="text-center text-gray-300 mb-6">
           AI Powered Enterprise Dashboard
         </p>
 
-        {/* Signup Name */}
+        {/* Name (Signup only) */}
         {isSignup && (
-          <motion.input
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <input
             type="text"
             name="name"
             placeholder="Full Name"
             onChange={handleChange}
-            className="w-full p-4 rounded-2xl bg-black/30 border border-white/10 outline-none mb-4"
+            className="w-full p-4 rounded-2xl bg-black/30 border border-white/10 mb-4 outline-none"
           />
         )}
 
         {/* Email */}
-        <div className="flex items-center bg-black/30 border border-white/10 rounded-2xl px-4 mb-4 hover:border-cyan-400 transition">
+        <div className="flex items-center bg-black/30 border border-white/10 rounded-2xl px-4 mb-4">
           <FaEnvelope className="text-cyan-400" />
-
           <input
             type="email"
             name="email"
-            placeholder="Email Address"
+            placeholder="Email"
             onChange={handleChange}
             className="w-full p-4 bg-transparent outline-none"
           />
         </div>
 
         {/* Password */}
-        <div className="flex items-center bg-black/30 border border-white/10 rounded-2xl px-4 mb-6 hover:border-purple-400 transition">
+        <div className="flex items-center bg-black/30 border border-white/10 rounded-2xl px-4 mb-6">
           <FaLock className="text-purple-400" />
-
           <input
             type="password"
             name="password"
@@ -152,20 +128,18 @@ function Login() {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleAuth}
-          className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 p-4 rounded-2xl font-bold text-lg shadow-2xl"
+          className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 p-4 rounded-2xl font-bold"
         >
           {isSignup ? "Create Account" : "Login"}
         </motion.button>
 
         {/* Toggle */}
         <p className="text-center text-gray-300 mt-6">
-          {isSignup
-            ? "Already have an account?"
-            : "Don't have an account?"}
+          {isSignup ? "Already have an account?" : "Don't have an account?"}
 
           <span
             onClick={() => setIsSignup(!isSignup)}
-            className="text-cyan-400 ml-2 cursor-pointer hover:text-cyan-300"
+            className="text-cyan-400 ml-2 cursor-pointer"
           >
             {isSignup ? "Login" : "Sign Up"}
           </span>
