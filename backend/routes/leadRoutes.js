@@ -11,7 +11,7 @@ const {
 
 // 🔒 Protect ALL routes
 router.post("/", authMiddleware, createLead);
-router.get("/", authMiddleware, getLeads);
+router.get("/", getLeads);
 router.put("/:id", authMiddleware, updateLead);
 router.delete("/:id", authMiddleware, deleteLead);
 
